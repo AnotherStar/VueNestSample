@@ -11,11 +11,11 @@ import { ItemsFilter, ProductService } from './product.service';
 import { Product } from './products.database';
 
 //!todo generic
-export interface ItemsList {
+export interface ItemsList<T> {
     total: number;
     limit: number;
     offset: number;
-    items: Product[];
+    items: T[];
 }
 
 @Controller('/product')
@@ -26,19 +26,11 @@ export class ProductController {
     async getList(
         @Query('searchString') searchString?: string,
         @Query('offset', ParseIntPipe) offset: number = 0,
-    ): Promise<ItemsList> {
-        console.log({ searchString, offset });
-
-        const items = await this.productService.getList();
-        const total = items.length;
-        const limit = 10;
-
-        return {
-            total,
-            limit,
-            offset,
-            items: items.slice(offset, limit),
-        };
+    ): Promise<ItemsList<Product>> {
+        return await this.productService.getList({
+            searchString,
+            offset
+        });
     }
 
     @Get('/:itemId')

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ItemsList } from './product.controller';
 import { productsDatabase, Product } from './products.database';
 
 export interface ItemsFilter {
@@ -17,10 +18,29 @@ export const randomBetween = (min: number, max: number, round?: true) => {
 
 @Injectable()
 export class ProductService {
-    async getList(filter?: ItemsFilter): Promise<Product[]> {
+    async getList(filter?: ItemsFilter): Promise<ItemsList<Product>> {
         //!todo filter works
         await delay(randomBetween(100, 1000));
-        return productsDatabase;
+
+        let items = productsDatabase;
+
+        const searchString = filter?.searchString ?? '';
+
+        if (searchString) {
+            items = items.filter(item =>
+                item.name.toLowerCase().includes(searchString.toLowerCase())
+            );
+        }
+
+        const offset = filter?.offset ?? 0;
+        const limit = 10;
+
+        return {
+            total: items.length,
+            limit,
+            offset,
+            items: items.slice(offset, offset + limit),
+        };
     }
 
     async getItem(itemId: string): Promise<Product | undefined> {
