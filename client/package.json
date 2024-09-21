@@ -25,6 +25,9 @@
     "dependencies": {
         "@vueuse/core": "^10.9.0",
         "axios": "^1.6.7",
+        "pixi.js": "^7.4.2",
+        "planck": "^1.0.5",
+        "planck-renderer": "^2.2.0",
         "vite-plugin-vue-layouts": "^0.11.0",
         "vue": "^3.4.15",
         "vue-router": "^4.2.5"

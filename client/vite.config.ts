@@ -5,6 +5,7 @@ import Components from 'unplugin-vue-components/vite';
 import alias from '@rollup/plugin-alias';
 import Pages from 'vite-plugin-pages';
 import Layouts from 'vite-plugin-vue-layouts';
+import fs from 'fs';
 
 const projectRootDir = resolve(__dirname);
 
@@ -37,6 +38,10 @@ export default ({ command, mode }) => {
                     target: 'http://127.0.0.1:4444',
                     changeOrigin: true,
                 },
+            },
+            https: {
+                key: fs.readFileSync('./key.pem'),
+                cert: fs.readFileSync('./cert.pem'),
             },
         },
 
