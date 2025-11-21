@@ -1,0 +1,193 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { Plugin } from 'vite';
+import * as glob from 'glob';
+
+/**
+ * Конфигурация для отдельной директории
+ */
+interface DirConfig {
+    /**
+     * Путь к папке относительно корня проекта
+     */
+    targetDir: string;
+
+    /**
+     * Паттерн для поиска файлов
+     */
+    pattern?: string;
+
+    /**
+     * Имя экспортируемого объекта
+     * (например, "Components" для components, "Systems" для systems)
+     */
+    exportName: string;
+}
+
+/**
+ * Плагин Vite для автоматического создания index.ts файлов
+ * с экспортом объекта, содержащего все дефолтные экспорты модулей
+ * @param options Настройки плагина
+ */
+export function autoIndexPlugin(options: {
+    /**
+     * Массив директорий для обработки
+     */
+    directories: DirConfig[];
+
+    /**
+     * Следить за изменениями в папках
+     */
+    watch?: boolean;
+}): Plugin {
+    const { directories, watch = true } = options;
+
+    // Функция обновления индексного файла для одной директории
+    const updateIndexFile = (dirConfig: DirConfig) => {
+        const { targetDir, pattern = '**/*.{ts,tsx}', exportName } = dirConfig;
+        const absoluteTargetDir = path.resolve(targetDir);
+        const indexFile = path.join(absoluteTargetDir, 'index.ts');
+
+        // Проверяем существование директории
+        if (!fs.existsSync(absoluteTargetDir)) {
+            console.warn(`Directory ${absoluteTargetDir} does not exist.`);
+            return;
+        }
+
+        // Получаем все файлы, соответствующие паттерну
+        const files = glob.sync(pattern, {
+            cwd: absoluteTargetDir,
+            ignore: ['index.ts'], // Игнорируем сам индексный файл
+        });
+
+        // Генерируем содержимое индексного файла
+        let indexContent = '/**\n';
+        indexContent += ' * ВНИМАНИЕ: Этот файл генерируется автоматически.\n';
+        indexContent +=
+            ' * Не редактируйте его вручную, так как ваши изменения будут перезаписаны.\n';
+        indexContent += ' */\n\n';
+
+        files.sort((a, b) => a.localeCompare(b));
+
+        // Импортируем дефолтные экспорты с уникальными именами
+        const imports = new Map<string, string>();
+
+        files.forEach(file => {
+            const fileWithoutExt = file.replace(/\.[^/.]+$/, '');
+            const moduleName = path.basename(fileWithoutExt);
+            // Создаем уникальное имя импорта, заменяя / на _
+            const importName = fileWithoutExt.replace(/\//g, '_');
+            imports.set(file, importName);
+            indexContent += `import ${importName} from './${fileWithoutExt}';\n`;
+        });
+
+        indexContent += '\n';
+
+        // Вспомогательная функция для создания вложенного объекта
+        const createNestedObject = (files: string[]) => {
+            const result: any = {};
+
+            files.forEach(file => {
+                const fileWithoutExt = file.replace(/\.[^/.]+$/, '');
+                const parts = fileWithoutExt.split('/');
+                const moduleName = parts.pop()!;
+
+                let current = result;
+                // Создаем вложенные объекты для каждой директории
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
+                    current[part] = current[part] || {};
+                    current = current[part];
+                }
+                // Используем уникальное имя импорта с префиксом пути
+                const importName = imports.get(file);
+                current[moduleName] = importName;
+            });
+
+            return result;
+        };
+
+        // Вспомогательная функция для преобразования объекта в строку
+        const stringifyObject = (obj: any, indent: number = 2): string => {
+            const padding = ' '.repeat(indent);
+            let result = '{\n';
+
+            for (const [key, value] of Object.entries(obj)) {
+                if (typeof value === 'object') {
+                    result += `${padding}${key}: ${stringifyObject(value, indent + 2)}`;
+                } else {
+                    // value теперь содержит имя импортированной переменной
+                    result += `${padding}${key}: ${value},\n`;
+                }
+            }
+
+            result += `${' '.repeat(indent - 2)}}${indent === 2 ? ';\n' : ',\n'}`;
+            return result;
+        };
+
+        // Создаем и экспортируем объект с вложенной структурой
+        const nestedObject = createNestedObject(files);
+        indexContent += `export const ${exportName} = ${stringifyObject(nestedObject)}`;
+
+        // Добавляем типизацию для лучшей поддержки IDE
+        indexContent += `export type ${exportName}Type = typeof ${exportName};\n`;
+
+        // Записываем содержимое в файл
+        fs.writeFileSync(indexFile, indexContent);
+        console.info(`Generated index file at: ${indexFile}`);
+    };
+
+    // Обновляем индексные файлы для всех директорий
+    const updateAllIndexFiles = () => {
+        directories.forEach(dirConfig => {
+            updateIndexFile(dirConfig);
+        });
+    };
+
+    return {
+        name: 'vite-plugin-auto-index',
+
+        configResolved() {
+            // Создаем индексные файлы при запуске сервера
+            updateAllIndexFiles();
+        },
+
+        configureServer(server) {
+            if (!watch) return;
+
+            // Наблюдаем за изменениями во всех целевых директориях
+            const watcher = server.watcher;
+
+            directories.forEach(dirConfig => {
+                const absoluteTargetDir = path.resolve(dirConfig.targetDir);
+                watcher.add(absoluteTargetDir);
+            });
+
+            watcher.on('add', file => {
+                // Проверяем, входит ли файл в какую-либо из целевых директорий
+                const dirConfig = directories.find(
+                    config =>
+                        file.startsWith(path.resolve(config.targetDir)) &&
+                        !file.endsWith('index.ts'),
+                );
+
+                if (dirConfig) {
+                    updateIndexFile(dirConfig);
+                }
+            });
+
+            watcher.on('unlink', file => {
+                // Проверяем, входит ли файл в какую-либо из целевых директорий
+                const dirConfig = directories.find(
+                    config =>
+                        file.startsWith(path.resolve(config.targetDir)) &&
+                        !file.endsWith('index.ts'),
+                );
+
+                if (dirConfig) {
+                    updateIndexFile(dirConfig);
+                }
+            });
+        },
+    };
+}
