@@ -4,7 +4,7 @@
         "url": "https://github.com/AnotherStar/AnotherStar"
     },
     "version": "0.1.0",
-    "description": "Game about search of another star",
+    "description": "Vue Nest sample",
     "main": "index.js",
     "scripts": {
         "dev": "vite",
@@ -15,6 +15,7 @@
     "license": "ISC",
     "devDependencies": {
         "@rollup/plugin-alias": "^5.1.0",
+        "@types/howler": "^2.2.12",
         "@vitejs/plugin-vue": "^5.0.3",
         "autoprefixer": "^10.4.17",
         "tailwindcss": "^3.4.1",
@@ -23,13 +24,21 @@
         "vite-plugin-pages": "^0.32.0"
     },
     "dependencies": {
+        "@dimforge/rapier2d": "^0.19.1",
+        "@pixi/filter-glow": "^5.2.1",
         "@vueuse/core": "^10.9.0",
         "axios": "^1.6.7",
-        "pixi.js": "^7.4.2",
-        "planck": "^1.0.5",
-        "planck-renderer": "^2.2.0",
+        "colyseus.js": "^0.16.21",
+        "howler": "^2.2.4",
+        "nipplejs": "^0.10.2",
+        "pixi-filters": "^6.1.4",
+        "pixi-viewport": "^6.0.3",
+        "pixi.js": "^8.13.2",
+        "socket.io-client": "^4.8.1",
+        "uuid": "^13.0.0",
         "vite-plugin-vue-layouts": "^0.11.0",
-        "vue": "^3.4.15",
+        "vue": "^3.5.22",
+        "vue-qrcode": "^2.2.2",
         "vue-router": "^4.2.5"
     }
 }

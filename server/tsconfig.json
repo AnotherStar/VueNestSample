@@ -5,8 +5,9 @@
         "removeComments": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
+        "useDefineForClassFields": false,
         "allowSyntheticDefaultImports": true,
-        "target": "es2017",
+        "target": "es2022",
         "sourceMap": true,
         "outDir": "./dist",
         "baseUrl": "./",
@@ -17,7 +18,8 @@
         "paths": {
             "@client/*": ["../client/src/*"],
             "@server/*": ["./src/*"]
-        }
+        },
+        "esModuleInterop": true
     },
     "exclude": ["--*", "**/--*"],
     "include": ["./src/**/*.ts"]
